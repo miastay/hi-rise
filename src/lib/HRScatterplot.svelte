@@ -1,6 +1,6 @@
 <script>
     import * as d3 from 'd3';
-    import { assoc_data, plotWidth, plotHeight, darkMode } from '../store';
+    import { assoc_data, plotWidth, plotHeight, colors } from '../store';
     import { WidgetPlaceholder, Spinner } from 'flowbite-svelte';
     
     export let data = [];
@@ -14,19 +14,17 @@
 
     export let significanceType = "Bonferroni";
     export let significanceLevel = 0.5;
-
-    export let pointColor = "#f0f0ff";
+    let ySignificance = -1;
 
     let loading = false;
+    let plotted = false;
 
     $: $assoc_data && processData($assoc_data)
 
     async function processData(data) {
         console.log(loading)
         loading = true;
-        await redrawData(data);
-        loading = false;
-        console.log(loading)
+        redrawData(data);
     }
 
     function yAxisTransform(yi) {
@@ -37,7 +35,7 @@
 
         if(points?.length == 0) return;
 
-        let ySignificance = 4;
+        ySignificance = 4;
         if(significanceType === "Bonferroni") {
             ySignificance = Math.log10(significanceLevel / points.length) * -1;
         }
@@ -62,6 +60,7 @@
         let currentChr = -1;
         let lastChrStart = 0;
         let maxps = 0;
+        let totalOffset = 0;
 
         let totalSignificant = 0;
         let significantSet = [];
@@ -99,9 +98,10 @@
                         scaffold_ranges[scaffold_ranges.length - 1].end_index = trimmed.length - 1;
                     }
                     lastChrStart = ps;
+                    totalOffset += Number.parseInt(points[i-1]?.ps ?? 0);
+                    maxps += totalOffset;
                     // push new chromosome entry
-                    scaffold_ranges.push({"name": chr, "start": lastChrStart, "start_index": trimmed.length, "end": -1, "end_index": -1});
-                    maxps += lastChrStart;
+                    scaffold_ranges.push({"name": chr, "start": lastChrStart, "start_index": trimmed.length, "end": -1, "end_index": -1, "offset": totalOffset});
                     currentChr = chr;
                 }
                 if(dynamicQuantiles) {
@@ -134,8 +134,15 @@
 
         let render_time = Date.now();
 
+        let psstart = scaffold_ranges[0].start;
+        let pswidth = 0;
+        for(let s = 0; s < scaffold_ranges.length; s++) {
+            pswidth += scaffold_ranges[s].end;
+        }
+        console.log(psstart, pswidth)
+
         const x = d3.scaleLinear()
-            .domain([0, 3100000000 + chrGap * 10]).nice()
+            .domain(d3.extent([psstart, pswidth])).nice()
             //.domain(d3.extent(points, d => d.ps)).nice()
             .range([marginLeft, width - marginRight]);
 
@@ -160,7 +167,7 @@
         // Create the axes.
         svg.append("g")
             .attr("transform", `translate(0,${height - marginBottom})`)
-            .call(d3.axisBottom(x).ticks(width / 80))
+            //.call(d3.axisBottom(x).ticks())
             .call(g => g.select(".domain").remove())
             .call(g => g.append("text")
                 .attr("x", width)
@@ -169,6 +176,11 @@
                 .attr("text-anchor", "end")
                 .text("ps"));
 
+        let scaffold_group = svg.append("g").attr("transform", `translate(0,${height - marginBottom})`)
+        for(let sc of scaffold_ranges) {
+            scaffold_group.append("text").attr("x", x(((sc.end - sc.start)/2) + sc.offset)).attr("y", marginBottom - 12).attr("fill", "currentColor").attr("font-size", 14).attr("text-anchor", "end").text(`chr${sc.name}`)
+        }
+            
         svg.append("g")
             .attr("transform", `translate(${marginLeft},0)`)
             .call(d3.axisLeft(y))
@@ -202,6 +214,20 @@
                 .attr("x2", width - marginRight));
 
 
+        // plot significance line
+        console.log(ySignificance)
+        svg.append("g")
+        .attr("stroke", $colors.significanceLine)
+        .attr("stroke-opacity", 1)
+        .attr("stroke-weight", 3)
+        .call(g => g.append("line")
+        .style("stroke-dasharray", ("2, 2"))
+            .attr("y1", y(ySignificance))
+            .attr("y2", y(ySignificance))
+            .attr("x1", marginLeft)
+            .attr("x2", width - marginRight));
+
+
         // plot by scaffold
 
         for(let s in scaffold_ranges) {
@@ -214,7 +240,7 @@
             let points = data.slice(sc.start_index, sc.end_index)
             //let linesub = lines.slice(Math.floor(sc.start_index / chunkWidth), Math.floor(sc.end_index / chunkWidth))
             svg.append("g")
-                .attr("fill", pointColor)
+                .attr("fill", $colors.points)
                 .selectAll("circle")
                 .data(points)
                 .join("circle")
@@ -272,13 +298,14 @@
         //     .text(d => d.name);
 
         console.log(`Rendering time: ${Date.now() - render_time}ms`)
-
+        plotted = true;
+        loading = false;
     }
 
   </script>
 
-<div id="container" class="text-black dark:text-white bg-gray-50 dark:bg-gray-900" style={`min-width: ${$plotWidth}px; min-height:${$plotHeight}px`}>
-    {#if !loading}Plot area{/if}
+<div id="container" class="text-black dark:text-white bg-white dark:bg-gray-900">
+    {#if !loading && !plotted}Plot area{/if}
     {#if loading}<Spinner size={12}/>{/if}
 </div>
 
@@ -288,5 +315,7 @@
         flex-direction: row;
         justify-content: center;
         align-items: center;
+        min-width: 100%;
+        aspect-ratio: 2/1;
     }
 </style>

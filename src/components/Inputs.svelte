@@ -57,7 +57,7 @@
     <span>{"Upload results of an association test. Rows should indicate associations for each position, with a column listing SNP names (rs*) and a column listing Z-scores or P-values. Additional columns such as chromosome/scaffold and position in bp will be used if an annotation file is not provided."}</span>
     <HrDropzone bind:value={associationFile} accepts=".assoc, .txt, .csv, .tsv" id="assocfile"/>
     {#if associationFileError}<Alert color="red">{associationFileError}</Alert>{/if}
-    {#if associationFileWarning}<Alert color="yellow">{associationFileWarning}</Alert>{/if}
+    {#if associationFileWarning}<Alert color="yellow" class="dark:bg-yellow-900">{associationFileWarning}</Alert>{/if}
     <!-- <Fileupload {...associationUploadProps} on:change={(e) => console.log(e)} bind:value={associationFile}/> -->
     <Label class="pb-2">File listing GWAS results. See <a href="/" class="dark:text-white">an example input</a>.</Label>
 
@@ -65,7 +65,7 @@
     <span>Upload the annotation file used to generate your data. This should contain information about SNPs, chromosomes/scaffolds, and genes. This is only necessary if your association file does not contain position information, or if you would like to annotate significant genes.</span>
     <HrDropzone bind:value={referenceFile} accepts=".gtf, .gff, .gff3"/>
     {#if referenceFileError}<Alert color="red">{referenceFileError}</Alert>{/if}
-    {#if referenceFileWarning}<Alert color="yellow">{referenceFileWarning}</Alert>{/if}
+    {#if referenceFileWarning}<Alert color="yellow" class="dark:bg-yellow-900">{referenceFileWarning}</Alert>{/if}
     <Label class="pb-2">Download a commonly used annotation file from <a href="https://www.gencodegenes.org/human/release_38.html" class="dark:text-white">Gencode</a>.</Label>
 
     <div class="go">

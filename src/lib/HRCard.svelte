@@ -1,9 +1,10 @@
 <script>
     import { Card } from 'flowbite-svelte'
     export let header;
+    export let addClass = '';
   </script>
   
-<Card class="p-8 dark:bg-gray-900 w-full max-w-full">
+<Card class={"p-8 dark:bg-gray-900 w-full max-w-full " + addClass}>
     {#if header}
         <h5 class="mb-2 text-2xl font-bold tracking-tight text-primary-800 dark:text-white">{header}</h5>
     {/if}
