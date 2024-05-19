@@ -6,7 +6,7 @@
 
     const palettes = {
         "hi-rise": {
-            points: "#1355ff",
+            points: "#1e14ff",
             significant: "#22e2ef",
             significanceLine: "#ff2233"
         },

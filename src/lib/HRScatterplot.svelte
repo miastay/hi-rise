@@ -81,7 +81,7 @@
                 let signif = yval > ySignificance;
                 if(signif) {
                     totalSignificant++;
-                    significantSet.push({x: ps, y: yval, sig: signif});
+                    significantSet.push({x: ps, y: yval, sig: signif, chr: chr, rs: p.rs});
                 }
                 if(dynamicQuantiles) {
                     tempValues.push({x: ps, y: yval, sig: signif})
@@ -142,7 +142,7 @@
         console.log(psstart, pswidth)
 
         const x = d3.scaleLinear()
-            .domain(d3.extent([psstart, pswidth])).nice()
+            .domain(d3.extent([0, pswidth + (chrGap * (scaffold_ranges.length - 1))]))
             //.domain(d3.extent(points, d => d.ps)).nice()
             .range([marginLeft, width - marginRight]);
 
@@ -177,8 +177,9 @@
                 .text("ps"));
 
         let scaffold_group = svg.append("g").attr("transform", `translate(0,${height - marginBottom})`)
-        for(let sc of scaffold_ranges) {
-            scaffold_group.append("text").attr("x", x(((sc.end - sc.start)/2) + sc.offset)).attr("y", marginBottom - 12).attr("fill", "currentColor").attr("font-size", 14).attr("text-anchor", "end").text(`chr${sc.name}`)
+        for(let s = 0; s < scaffold_ranges.length; s++) {
+            let sc = scaffold_ranges[s];
+            scaffold_group.append("text").attr("x", x(((sc.end - sc.start)/2) + sc.offset + (chrGap * s))).attr("y", marginBottom - 12).attr("fill", "currentColor").attr("font-size", 14).attr("text-anchor", "middle").text(`chr${sc.name}`)
         }
             
         svg.append("g")
@@ -247,6 +248,8 @@
                 .attr("cx", d => x(d.x + xoffset + (chrGap * s)))
                 .attr("cy", d => y(d.y))
                 .attr("r", 3);
+
+            
             // svg.append("g")
             //     .attr("stroke-opacity", 1)
             //     .attr("stroke-width", 6)
@@ -260,6 +263,30 @@
             //     .attr("x2", d => x(d.x + xoffset))
             //     .attr("stroke-linecap", "round");
         }
+
+        // plot significant point overlays
+        svg.append("g")
+                .attr("fill-opacity", 0)
+                .attr("stroke", $colors.significant)
+                .attr("stroke-width", 1)
+                .selectAll("circle")
+                .data(significantSet)
+                .join("circle")
+                .attr("cx", d => x(d.x + scaffold_ranges[Number.parseInt(d.chr) - 1].offset + (chrGap * (Number.parseInt(d.chr) - 1))))
+                .attr("cy", d => y(d.y))
+                .attr("r", 5);
+
+        svg.append("g")
+            .attr("font-family", "sans-serif")
+            .attr("font-size", 10)
+            .selectAll("text")
+            .data(significantSet)
+            .join("text")
+            .attr("dy", "0.35em")
+            .attr("x", d => x(d.x + scaffold_ranges[Number.parseInt(d.chr) - 1].offset + (chrGap * (Number.parseInt(d.chr) - 1))) + 10)
+            .attr("y", d => y(d.y) - 10)
+            .text(d => d.rs);
+
         // svg.append("g")
         //         .attr("stroke-opacity", 1)
         //         .attr("stroke-width", 6)
