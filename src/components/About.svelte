@@ -4,7 +4,7 @@
 </script>
 
 <HrCard header={"Beautiful Manhattan plots, in the browser"}>
-    This is the card example from a custom class.
+    Upload results from a GWAS-like association study and generate a sleek, customizable Manhattan plot of your results.
 </HrCard>
 
 <style lang='scss'>

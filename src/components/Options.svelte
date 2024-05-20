@@ -42,11 +42,58 @@
         document.body.removeChild(downloadLink);
     }
 
-    function downloadAsPNG() {
-        new Canvg('canvas', document.querySelector("svg#plot"));
-        let canvas = document.getElementById("canvas");
-        let img = canvas.toDataURL("image/png");
-        console.log(img)
+    function downloadAs(type) {
+
+        var svg = document.querySelector('svg#plot');
+        let blankImg = document.createElement("img")
+        blankImg.id = "blankimg"
+        document.body.appendChild(blankImg)
+        var img = document.querySelector('img#blankimg');
+
+        let blankCanvas = document.createElement("canvas")
+        blankCanvas.id = "blankcanvas"
+        blankCanvas.width = $plotWidth * upscale;
+        blankCanvas.height = $plotHeight * upscale;
+        document.body.appendChild(blankCanvas)
+        var canvas = document.querySelector('canvas#blankcanvas');
+
+        // get svg data
+        var xml = new XMLSerializer().serializeToString(svg);
+
+        // make it base64
+        var svg64 = btoa(xml);
+        var b64Start = 'data:image/svg+xml;base64,';
+
+        // prepend a "header"
+        var image64 = b64Start + svg64;
+
+       // let svgUrl = URL.createObjectURL(svgBlob);
+
+        // set it as the source of the img element
+        let downloadLink = document.createElement("a");
+        if(type === "svg") {
+            downloadLink.href = image64;
+            downloadLink.download = "hi-rise.svg";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+
+        if(type == "png") {
+            let pngData = '';
+            img.onload = function() {
+                // draw the image onto the canvas
+                canvas.getContext('2d').drawImage(img, 0, 0, $plotWidth * upscale, $plotHeight * upscale);
+                pngData = document.querySelector("canvas#blankcanvas").toDataURL("image/png") 
+                downloadLink.href = pngData;
+                downloadLink.download = "hi-rise.png";
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+            }
+            img.src = image64;
+        }
+
     }
 
     $: ($selectedScaffolds) => $optimizationChunkSize = 75 * $selectedScaffolds.length;
@@ -62,6 +109,16 @@
     function resetSelectedScaffolds(scaf) {
         selScaffolds = [...scaf];
     }
+
+    let upscale = 1;
+    let upscales = [
+        {value: 1, name: "1x"},
+        {value: 2, name: "2x"},
+        {value: 3, name: "3x"},
+        {value: 4, name: "4x"}
+    ]
+
+    let includeBackground = false;
 
 </script>
 
@@ -81,8 +138,17 @@
                             <NumberInput bind:value={$plotHeight} />
                         </Label>
                     </div>
-                    <Button on:click={() => downloadAsSVG()}>Download SVG</Button>
-                    <Button on:click={() => downloadAsPNG()}>Download PNG</Button>
+                    <Button on:click={() => downloadAs("svg")}>Download SVG</Button>
+                    <Button on:click={() => downloadAs("png")}>Download PNG</Button>
+                    <div class="row">
+                        <Label class="space-y-2 mb-4">
+                            <span>Upscale</span>
+                            <Select dense outlined items={upscales} bind:value={upscale}></Select>
+                        </Label>
+                        <Label class="space-y-2 mb-4">
+                            <Toggle bind:checked={includeBackground}>Include background</Toggle>
+                        </Label>
+                    </div>
                 </div>
                 <div class="col">
                     <h5 class="mb-0 text-xl font-semibold tracking-tight text-primary-800 dark:text-white">Setup</h5>
@@ -228,6 +294,10 @@
     :global(div[role="tabpanel"]) {
         @apply bg-transparent dark:bg-gray-900 mt-0 px-0 py-2;
         border-radius: 0;
+    }
+
+    :global(#blankcanvas) {
+        display: none;
     }
 
 </style>
