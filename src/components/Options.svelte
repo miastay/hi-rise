@@ -8,8 +8,8 @@
 
     const palettes = {
         "hi-rise": {
-            points: "#09459A",
-            significant: "#09459A",
+            points: "#1e14ff",
+            significant: "#1e14ff",
             significanceLine: "#ff2233"
         },
         "black and white": {
@@ -45,9 +45,6 @@
     function downloadAs(type) {
 
         var svg = document.querySelector('svg#plot');
-        let blankImg = document.createElement("img")
-        blankImg.id = "blankimg"
-        document.body.appendChild(blankImg)
         var img = document.querySelector('img#blankimg');
 
         let blankCanvas = document.createElement("canvas")

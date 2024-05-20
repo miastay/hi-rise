@@ -1,6 +1,6 @@
 <script>
     import * as d3 from 'd3';
-    import { assoc_data, plotWidth, plotHeight, colors, optimizationStats, optimizationChunkSize, doOptimization, sigColumn, posColumn, rsColumn, chrColumn, live_data, selectedScaffolds, scaffoldGap, optimizationChunkFactor } from '../store';
+    import { assoc_data, plotWidth, plotHeight, colors, optimizationStats, optimizationChunkSize, doOptimization, sigColumn, posColumn, rsColumn, chrColumn, live_data, selectedScaffolds, scaffoldGap, optimizationChunkFactor, showCanvas } from '../store';
     import { WidgetPlaceholder, Spinner, Button } from 'flowbite-svelte';
     import { onMount } from 'svelte';
     import { RefreshOutline } from 'flowbite-svelte-icons';
@@ -14,7 +14,7 @@
     export let drawQuantilesDynamically = true;
 
     export let significanceType = "Bonferroni";
-    export let significanceLevel = 0.5;
+    export let significanceLevel = 0.05;
     let ySignificance = -1;
 
     let loading = false;
@@ -212,7 +212,7 @@
         let scaffold_group = svg.append("g").attr("transform", `translate(0,${height - marginBottom})`).attr("font-size", 12)
         for(let s = 0; s < scaffold_ranges.length; s++) {
             let sc = scaffold_ranges[s];
-            scaffold_group.append("text").attr("x", x(((sc.end - sc.start)/2) + sc.offset + ($scaffoldGap * s))).attr("y", marginBottom - 12).attr("fill", "currentColor").attr("text-anchor", "middle").text(`chr${sc.name}`)
+            scaffold_group.append("text").attr("x", x(((sc.end - sc.start)/2) + sc.offset + ($scaffoldGap * s))).attr("y", marginBottom - 12).attr("fill", "currentColor").attr("text-anchor", "middle").text(`${sc.name}`)
         }
             
         svg.append("g")
@@ -259,7 +259,18 @@
             .attr("y1", y(ySignificance))
             .attr("y2", y(ySignificance))
             .attr("x1", marginLeft)
-            .attr("x2", width - marginRight));
+            .attr("x2", width - marginRight))
+
+        svg.append("text")
+            .attr("x", width - marginRight)
+            .attr("y", y(ySignificance) + 10)
+            .attr("font-family", "sans-serif")
+            .attr("font-size", 10)
+            .attr("font-weight", "lighter")
+            .attr("fill", $colors.significanceLine)
+            .attr("text-anchor", "end")
+            .text(`p = 10^-${Math.round(ySignificance * 100) / 100}`);
+
 
 
         // plot by scaffold
@@ -381,6 +392,7 @@
 <div id="container" class="text-black dark:text-white bg-white dark:bg-gray-900">
     {#if !loading && !plotted}Plot area{/if}
     {#if loading}<Spinner size={12}/>{/if}
+    <img id="blankimg" style={`display: ${$showCanvas ? "block" : "none"}`} alt="plot"/>
 </div>
 {#if $live_data}
 <Button class="absolute right-6 top-26 w-12 h-12" on:click={() => resetPlot()}>
