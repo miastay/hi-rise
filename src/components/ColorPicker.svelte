@@ -30,7 +30,8 @@
                 outline: solid 2px white;
                 outline-offset: -1px;
                 border: solid 3px black;
-                transition: all 0.1s ease;
+                //transition: all 0.1s ease !important;
+                //transition-duration: 0.01s !important;
             }
         }
         span {

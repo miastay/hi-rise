@@ -1,7 +1,9 @@
 <script>
     import * as d3 from 'd3';
-    import { assoc_data, plotWidth, plotHeight, colors } from '../store';
-    import { WidgetPlaceholder, Spinner } from 'flowbite-svelte';
+    import { assoc_data, plotWidth, plotHeight, colors, optimizationStats, optimizationChunkSize, doOptimization, sigColumn, posColumn, rsColumn, chrColumn, live_data, selectedScaffolds, scaffoldGap, optimizationChunkFactor } from '../store';
+    import { WidgetPlaceholder, Spinner, Button } from 'flowbite-svelte';
+    import { onMount } from 'svelte';
+    import { RefreshOutline } from 'flowbite-svelte-icons';
     
     export let data = [];
     export let marginTop = 40;
@@ -10,7 +12,6 @@
     export let marginLeft = 40;
 
     export let drawQuantilesDynamically = true;
-    export let chrGap = 50000000;
 
     export let significanceType = "Bonferroni";
     export let significanceLevel = 0.5;
@@ -19,7 +20,7 @@
     let loading = false;
     let plotted = false;
 
-    $: $assoc_data && processData($assoc_data)
+    $: $live_data && processData($live_data)
 
     async function processData(data) {
         console.log(loading)
@@ -31,9 +32,30 @@
         return Math.log10(yi) * -1;
     }
 
+    function resetPlot() {
+        d3.selectAll("svg#plot").remove();
+        $live_data = $assoc_data;
+    }
+
+    onMount(() => {
+        window.addEventListener("plot", (e) => {
+            resetPlot();
+        })
+    })
+
     async function redrawData(points) {
 
         if(points?.length == 0) return;
+        $optimizationStats.originalTotal = points.length;
+
+
+        if(!$doOptimization) {
+            // TODO
+        }
+
+
+        points = points.filter((x) => $selectedScaffolds.includes(x[$chrColumn]))
+
 
         ySignificance = 4;
         if(significanceType === "Bonferroni") {
@@ -41,6 +63,8 @@
         }
 
         let process_time = Date.now();
+
+        window.dispatchEvent(new CustomEvent("LoadPlot"))
 
         const width = $plotWidth;
         const height = $plotHeight;
@@ -50,8 +74,7 @@
         let trimmed = []
         let lines = []
         let scaffold_ranges = [];
-        let threshold = 0.1;
-        let chunkWidth = 1000;
+        let chunkWidth = $optimizationChunkSize;
         let numChunks = Math.ceil(points.length / chunkWidth);
 
         let dynamicQuantiles = drawQuantilesDynamically;
@@ -75,13 +98,13 @@
             for(let i = chunkStart; i < Math.min(chunkMax, points.length); i++) {
                 let p = points[i];
                 // get log10 value
-                let chr = p.chr
-                let yval = yAxisTransform(Number.parseFloat(p.p_lrt));
-                let ps = Number.parseInt(p.ps)
+                let chr = p[$chrColumn]
+                let yval = yAxisTransform(Number.parseFloat(p[$sigColumn]));
+                let ps = Number.parseInt(p[$posColumn])
                 let signif = yval > ySignificance;
                 if(signif) {
                     totalSignificant++;
-                    significantSet.push({x: ps, y: yval, sig: signif, chr: chr, rs: p.rs});
+                    significantSet.push({x: ps, y: yval, sig: signif, chr: chr, rs: p[$rsColumn]});
                 }
                 if(dynamicQuantiles) {
                     tempValues.push({x: ps, y: yval, sig: signif})
@@ -94,14 +117,15 @@
                 if(currentChr !== chr) {
                     // set end of last chromosome
                     if(scaffold_ranges.length !== 0) {
-                        scaffold_ranges[scaffold_ranges.length - 1].end = Number.parseInt(points[i-1].ps);
+                        scaffold_ranges[scaffold_ranges.length - 1].end = points[i-1] ? Number.parseInt(points[i-1][$posColumn]) : 0;
                         scaffold_ranges[scaffold_ranges.length - 1].end_index = trimmed.length - 1;
                     }
                     lastChrStart = ps;
-                    totalOffset += Number.parseInt(points[i-1]?.ps ?? 0);
+                    totalOffset += points[i-1] ? Number.parseInt(points[i-1][$posColumn]) : 0;
                     maxps += totalOffset;
+
                     // push new chromosome entry
-                    scaffold_ranges.push({"name": chr, "start": lastChrStart, "start_index": trimmed.length, "end": -1, "end_index": -1, "offset": totalOffset});
+                    scaffold_ranges.push({"name": chr, "start": lastChrStart, "start_index": trimmed.length, "end": -1, "end_index": -1, "offset": totalOffset, "render": $selectedScaffolds.includes(chr)});
                     currentChr = chr;
                 }
                 if(dynamicQuantiles) {
@@ -112,7 +136,7 @@
             let drawThreshold;
             if(dynamicQuantiles) {
                 quant = quant / ((chunkMax - chunkStart) * 1.0);
-                drawThreshold = (quant + max) / 3.0
+                drawThreshold = (quant + max) / $optimizationChunkFactor
             } else {
                 drawThreshold = defaultQuantile;
             }
@@ -124,12 +148,20 @@
                 }
             }
         }
-        scaffold_ranges[scaffold_ranges.length - 1].end = Number.parseInt(points[points.length-1].ps);
+        scaffold_ranges[scaffold_ranges.length - 1].end = Number.parseInt(points[points.length-1][$posColumn]);
         scaffold_ranges[scaffold_ranges.length - 1].end_index = points.length-1;
+
+        let scaffold_map = []
+        for(let s = 0; s < scaffold_ranges.length; s++) {
+            scaffold_map.push(scaffold_ranges[s].name)
+        }
+        console.log(scaffold_map)
 
         console.log(scaffold_ranges);
         const data = trimmed;
-        console.log(`Process time: ${Date.now() - process_time}ms`)
+        $optimizationStats.numReduced = trimmed.length + lines.length;
+        $optimizationStats.processTime = Date.now() - process_time;
+        console.log(`Process time: ${$optimizationStats.processTime}ms`)
         console.log(`Num significant: ${totalSignificant}`)
 
         let render_time = Date.now();
@@ -142,7 +174,7 @@
         console.log(psstart, pswidth)
 
         const x = d3.scaleLinear()
-            .domain(d3.extent([0, pswidth + (chrGap * (scaffold_ranges.length - 1))]))
+            .domain(d3.extent([0, pswidth + ($scaffoldGap * (scaffold_ranges.length - 1))]))
             //.domain(d3.extent(points, d => d.ps)).nice()
             .range([marginLeft, width - marginRight]);
 
@@ -160,6 +192,7 @@
 
         // Create the SVG container.
         const svg = d3.select("#container").append("svg")
+            .attr("id", "plot")
             .attr("viewBox", [0, 0, width, height])
             .attr("style", "max-width: 100%; height: auto; font: 10px sans-serif;");
 
@@ -176,10 +209,10 @@
                 .attr("text-anchor", "end")
                 .text("ps"));
 
-        let scaffold_group = svg.append("g").attr("transform", `translate(0,${height - marginBottom})`)
+        let scaffold_group = svg.append("g").attr("transform", `translate(0,${height - marginBottom})`).attr("font-size", 12)
         for(let s = 0; s < scaffold_ranges.length; s++) {
             let sc = scaffold_ranges[s];
-            scaffold_group.append("text").attr("x", x(((sc.end - sc.start)/2) + sc.offset + (chrGap * s))).attr("y", marginBottom - 12).attr("fill", "currentColor").attr("font-size", 14).attr("text-anchor", "middle").text(`chr${sc.name}`)
+            scaffold_group.append("text").attr("x", x(((sc.end - sc.start)/2) + sc.offset + ($scaffoldGap * s))).attr("y", marginBottom - 12).attr("fill", "currentColor").attr("text-anchor", "middle").text(`chr${sc.name}`)
         }
             
         svg.append("g")
@@ -232,10 +265,13 @@
         // plot by scaffold
 
         for(let s in scaffold_ranges) {
+            
             let sc = scaffold_ranges[s]
+
             let xoffset = 0;
             for(let b = 0; b < s; b++) {
-                xoffset += scaffold_ranges[b].end;
+                if($selectedScaffolds.includes(scaffold_ranges[b].name))
+                    xoffset += scaffold_ranges[b].end;
             }
             console.log(xoffset)
             let points = data.slice(sc.start_index, sc.end_index)
@@ -245,7 +281,7 @@
                 .selectAll("circle")
                 .data(points)
                 .join("circle")
-                .attr("cx", d => x(d.x + xoffset + (chrGap * s)))
+                .attr("cx", d => x(d.x + xoffset + ($scaffoldGap * s)))
                 .attr("cy", d => y(d.y))
                 .attr("r", 3);
 
@@ -264,6 +300,15 @@
             //     .attr("stroke-linecap", "round");
         }
 
+        // svg.append("g")
+        //         .attr("fill", $colors.points)
+        //         .selectAll("circle")
+        //         .data(points)
+        //         .join("circle")
+        //         .attr("cx", d => x(d.x + scaffold_ranges[scaffold_map.indexOf(d.chr)].offset + (chrGap * (scaffold_map.indexOf(d.chr)))))
+        //         .attr("cy", d => y(d.y))
+        //         .attr("r", 3);
+
         // plot significant point overlays
         svg.append("g")
                 .attr("fill-opacity", 0)
@@ -272,33 +317,34 @@
                 .selectAll("circle")
                 .data(significantSet)
                 .join("circle")
-                .attr("cx", d => x(d.x + scaffold_ranges[Number.parseInt(d.chr) - 1].offset + (chrGap * (Number.parseInt(d.chr) - 1))))
+                .attr("cx", d => x(d.x + scaffold_ranges[scaffold_map.indexOf(d.chr)].offset + ($scaffoldGap * (scaffold_map.indexOf(d.chr)))))
                 .attr("cy", d => y(d.y))
                 .attr("r", 5);
 
         svg.append("g")
             .attr("font-family", "sans-serif")
             .attr("font-size", 10)
+            .attr("fill", "currentColor")
             .selectAll("text")
             .data(significantSet)
             .join("text")
             .attr("dy", "0.35em")
-            .attr("x", d => x(d.x + scaffold_ranges[Number.parseInt(d.chr) - 1].offset + (chrGap * (Number.parseInt(d.chr) - 1))) + 10)
-            .attr("y", d => y(d.y) - 10)
+            .attr("x", d => x(d.x + scaffold_ranges[scaffold_map.indexOf(d.chr)].offset + ($scaffoldGap * (scaffold_map.indexOf(d.chr)))) + 6)
+            .attr("y", d => y(d.y) - 6)
             .text(d => d.rs);
 
-        // svg.append("g")
-        //         .attr("stroke-opacity", 1)
-        //         .attr("stroke-width", 6)
-        //         .selectAll("line")
-        //         .data(lines)
-        //         .join("line")
-        //         .attr("stroke", d => Number.parseInt(d.chr) % 2 == 0 ? "red" : "blue")
-        //         .attr("y1", y(0))
-        //         .attr("y2", d => y(d.y))
-        //         .attr("x1", d => x(d.x + scaffold_ranges[Number.parseInt(d.chr) - 2]?.end ?? 0))
-        //         .attr("x2", d => x(d.x + scaffold_ranges[Number.parseInt(d.chr) - 2]?.end ?? 0))
-        //         .attr("stroke-linecap", "round");
+        svg.append("g")
+            .attr("stroke-opacity", 1)
+            .attr("stroke-width", 6)
+            .selectAll("line")
+            .data(lines)
+            .join("line")
+            .attr("stroke", $colors.points)
+            .attr("y1", y(0))
+            .attr("y2", d => y(d.y))
+            .attr("x1", d => x(d.x + scaffold_ranges[scaffold_map.indexOf(d.chr)]?.offset + ($scaffoldGap * (scaffold_map.indexOf(d.chr)))))
+            .attr("x2", d => x(d.x + scaffold_ranges[scaffold_map.indexOf(d.chr)]?.offset + ($scaffoldGap * (scaffold_map.indexOf(d.chr)))))
+            .attr("stroke-linecap", "round");
 
         // // Plot the points above the threshold
         // svg.append("g")
@@ -324,7 +370,8 @@
         //     .attr("y", d => y(d.hp))
         //     .text(d => d.name);
 
-        console.log(`Rendering time: ${Date.now() - render_time}ms`)
+        $optimizationStats.renderTime = Date.now() - render_time;
+        console.log(`Rendering time: ${$optimizationStats.renderTime}ms`)
         plotted = true;
         loading = false;
     }
@@ -335,6 +382,11 @@
     {#if !loading && !plotted}Plot area{/if}
     {#if loading}<Spinner size={12}/>{/if}
 </div>
+{#if $live_data}
+<Button class="absolute right-6 top-26 w-12 h-12" on:click={() => resetPlot()}>
+    <RefreshOutline />
+</Button>
+{/if}
 
 <style lang="scss">
     #container {

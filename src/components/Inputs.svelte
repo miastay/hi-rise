@@ -1,7 +1,7 @@
 <script>
-    import { Label, Fileupload, Alert, Button } from 'flowbite-svelte';
+    import { Label, Fileupload, Alert, Button, SpeedDial } from 'flowbite-svelte';
     import { ArrowRightOutline } from 'flowbite-svelte-icons';
-    import { assoc_data } from '../store.js';
+    import { assoc_data, chrColumn, inputColumns, live_data, scaffolds, selectedScaffolds } from '../store.js';
     import HrCard from '../lib/HRCard.svelte';
     import HrDropzone from '../lib/HRDropzone.svelte';
     import * as d3 from 'd3';
@@ -34,10 +34,31 @@
         let txt = event.target.result;
         if(txt) {
             $assoc_data = d3.tsvParse(txt)
+            $inputColumns = [];
+            // get columns
+            Object.keys($assoc_data[0]).forEach((x) => $inputColumns.push({value: x, name: x}))
+            updateScaffoldList("chr")
+            console.log($inputColumns)
         }
-            
     }
-  
+
+    $: updateScaffoldList($chrColumn)
+    function updateScaffoldList(col) {
+        console.log("updating scaffolds...")
+        // get all scaffold names
+        $scaffolds = [];
+        for(let d of $assoc_data) {
+            if($scaffolds.includes(d[col])) continue;
+            $scaffolds.push(d[col])
+            if($scaffolds.length > 30) {
+                console.error("Too many chrs!")
+                return;
+            }
+        }
+        $selectedScaffolds = $scaffolds;
+        console.log($scaffolds)
+    }
+
     let referenceFile = [];
     let referenceFileWarning = null;
     let referenceFileError = null;
@@ -69,11 +90,10 @@
     <Label class="pb-2">Download a commonly used annotation file from <a href="https://www.gencodegenes.org/human/release_38.html" class="dark:text-white">Gencode</a>.</Label>
 
     <div class="go">
-        <Button size='lg'>Generate plot <ArrowRightOutline class="w-5 h-5 ms-2"/></Button>
+        <Button size='lg' on:click={() => window.dispatchEvent(new CustomEvent("plot"))}>Generate plot <ArrowRightOutline class="w-5 h-5 ms-2"/></Button>
     </div>
-
+      
 </HrCard>
-
 
 <style lang='scss'>
     .go {
