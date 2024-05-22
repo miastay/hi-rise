@@ -1,7 +1,7 @@
 <script>
     import HrCard from '../lib/HRCard.svelte';
     import { Tabs, TabItem, NumberInput, Label, Select, Toggle, Radio, Card, Badge, Checkbox, Button, Range } from 'flowbite-svelte';
-    import { plotWidth, plotHeight, colors, doOptimization, optimizationChunkSize, optimizationType, optimizationStats, inputColumns, posColumn, sigColumn, chrColumn, rsColumn, scaffolds, selectedScaffolds, scaffoldGap, optimizationChunkFactor } from '../store';
+    import { plotWidth, plotHeight, colors, doOptimization, optimizationChunkSize, optimizationType, optimizationStats, inputColumns, posColumn, sigColumn, chrColumn, rsColumn, scaffolds, selectedScaffolds, scaffoldGap, optimizationChunkFactor, drawIdeograms } from '../store';
     import ColorPicker from './ColorPicker.svelte';
     import HrQuestion from '../lib/HRQuestion.svelte';
     import { Canvg } from 'canvg';
@@ -80,7 +80,14 @@
             let pngData = '';
             img.onload = function() {
                 // draw the image onto the canvas
-                canvas.getContext('2d').drawImage(img, 0, 0, $plotWidth * upscale, $plotHeight * upscale);
+                let ctx = canvas.getContext('2d');
+                canvas.width = $plotWidth * upscale;
+                canvas.height = $plotHeight * upscale;
+                if(includeBackground) {
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(0, 0, $plotWidth * upscale, $plotHeight * upscale)
+                }
+                ctx.drawImage(img, 0, 0, $plotWidth * upscale, $plotHeight * upscale);
                 pngData = document.querySelector("canvas#blankcanvas").toDataURL("image/png") 
                 downloadLink.href = pngData;
                 downloadLink.download = "hi-rise.png";
@@ -199,6 +206,7 @@
                         <ColorPicker name="Significant Points" bind:color={$colors.significant}/> <span>x</span>
                     </div>
                     <ColorPicker name="Significance Line" bind:color={$colors.significanceLine}/>
+                    <Toggle bind:checked={$drawIdeograms}>Draw ideograms <HrQuestion><span>Reduce the number of points plotted below a perceptible significance level.</span></HrQuestion></Toggle>
                 </div>
             </div>
         </TabItem>

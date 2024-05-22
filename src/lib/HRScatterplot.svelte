@@ -1,6 +1,6 @@
 <script>
     import * as d3 from 'd3';
-    import { assoc_data, plotWidth, plotHeight, colors, optimizationStats, optimizationChunkSize, doOptimization, sigColumn, posColumn, rsColumn, chrColumn, live_data, selectedScaffolds, scaffoldGap, optimizationChunkFactor, showCanvas } from '../store';
+    import { assoc_data, plotWidth, plotHeight, colors, optimizationStats, optimizationChunkSize, doOptimization, sigColumn, posColumn, rsColumn, chrColumn, live_data, selectedScaffolds, scaffoldGap, optimizationChunkFactor, showCanvas, drawIdeograms, pointRadius } from '../store';
     import { WidgetPlaceholder, Spinner, Button } from 'flowbite-svelte';
     import { onMount } from 'svelte';
     import { RefreshOutline } from 'flowbite-svelte-icons';
@@ -203,16 +203,17 @@
             //.call(d3.axisBottom(x).ticks())
             .call(g => g.select(".domain").remove())
             .call(g => g.append("text")
-                .attr("x", width)
-                .attr("y", marginBottom - 4)
+                .attr("x", (width / 2.0))
+                .attr("y", marginBottom - 0)
                 .attr("fill", "currentColor")
                 .attr("text-anchor", "end")
-                .text("ps"));
+                .text("chromosome"));
 
         let scaffold_group = svg.append("g").attr("transform", `translate(0,${height - marginBottom})`).attr("font-size", 12)
+        let yDiff = ($drawIdeograms) ? 8 : 16;
         for(let s = 0; s < scaffold_ranges.length; s++) {
             let sc = scaffold_ranges[s];
-            scaffold_group.append("text").attr("x", x(((sc.end - sc.start)/2) + sc.offset + ($scaffoldGap * s))).attr("y", marginBottom - 12).attr("fill", "currentColor").attr("text-anchor", "middle").text(`${sc.name}`)
+            scaffold_group.append("text").attr("x", x(((sc.end - sc.start)/2) + sc.offset + ($scaffoldGap * s))).attr("y", marginBottom - yDiff).attr("fill", "currentColor").attr("text-anchor", "middle").text(`${sc.name}`)
         }
             
         svg.append("g")
@@ -221,8 +222,10 @@
             .call(g => g.select(".domain").remove())
             .call(g => g.append("text")
                 .attr("x", -marginLeft)
-                .attr("y", 10)
+                .attr("y", (height / 2.0) - (marginLeft / 2) - 5)
                 .attr("fill", "currentColor")
+                .style('transform', `rotateZ(-90deg)`)
+                .style('transform-origin', '0% 50%')
                 .attr("text-anchor", "start")
                 .text("-log(p-value)"));
 
@@ -309,6 +312,18 @@
             //     .attr("x1", d => x(d.x + xoffset))
             //     .attr("x2", d => x(d.x + xoffset))
             //     .attr("stroke-linecap", "round");
+            if($drawIdeograms) {
+                let yPad = 0;
+                let off = xoffset + ($scaffoldGap * s);
+                svg.append("g")
+                    .append("svg:image")
+                    .attr('x', x(off) - $pointRadius)
+                    .attr('y', height - marginBottom + yPad)
+                    .attr('width', x(sc.end) - x(0) +  2 * $pointRadius)
+                    .style('transform', `scaleY(250%)`)
+                    .style('transform-origin', `0% ${100 * (height - marginBottom) / (height * 1.0)}%`)
+                    .attr("xlink:href", `SVG/chr${sc.name}.svg`)
+            }
         }
 
         // svg.append("g")

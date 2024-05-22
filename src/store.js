@@ -46,5 +46,7 @@ export const selectedScaffolds = writable([]);
 
 export const scaffoldGap = writable(50000000);
 
+export const drawIdeograms = writable(false);
+export const pointRadius = writable(3);
 
 export const showCanvas = writable(false);

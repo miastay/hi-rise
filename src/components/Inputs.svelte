@@ -96,8 +96,27 @@
 </HrCard>
 
 <style lang='scss'>
+
+    @tailwind base;
+    @tailwind components;
+    @tailwind utilities;
+
     .go {
         display: flex;
         flex-direction: row-reverse;
     }
+
+    :global(input[type="range"]::-moz-range-progress) {
+        border-radius: 1rem;
+        background: rgb(30 20 255 / var(--tw-text-opacity)) !important;
+        height: 8px;
+    }
+    :global(input[type="range"]::-moz-range-thumb) {
+        @apply bg-primary-500;
+    }
+
+    :global(input[type="range"]) {
+        //overflow: hidden;
+    }
+
 </style>
