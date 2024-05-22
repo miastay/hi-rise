@@ -5,6 +5,7 @@
     import HrCard from '../lib/HRCard.svelte';
     import HrDropzone from '../lib/HRDropzone.svelte';
     import * as d3 from 'd3';
+    import { base } from '$app/paths';
   
     let associationFile = [];
     let associationFileWarning = null;
@@ -80,7 +81,7 @@
     {#if associationFileError}<Alert color="red">{associationFileError}</Alert>{/if}
     {#if associationFileWarning}<Alert color="yellow" class="dark:bg-yellow-900">{associationFileWarning}</Alert>{/if}
     <!-- <Fileupload {...associationUploadProps} on:change={(e) => console.log(e)} bind:value={associationFile}/> -->
-    <Label class="pb-2">File listing GWAS results. See <a href="/" class="dark:text-white">an example input</a>.</Label>
+    <Label class="pb-2">File listing GWAS results. See <a href="{base}" class="dark:text-white">an example input</a>.</Label>
 
     <h5 class="mb-0 text-2xl font-bold tracking-tight text-primary-800 dark:text-white">{"Upload annotation file (optional)"}</h5>
     <span>Upload the annotation file used to generate your data. This should contain information about SNPs, chromosomes/scaffolds, and genes. This is only necessary if your association file does not contain position information, or if you would like to annotate significant genes.</span>
