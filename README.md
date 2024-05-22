@@ -7,7 +7,8 @@ hi-rise optimizes SVG rendering without comprimising visual integrity, reducing 
 Configurable optimization settings to balance visuals with compute.
 
 ![image](https://github.com/miastay/hi-rise/assets/59121627/504fd9bd-85b5-4723-9928-c09867c774c4)
-477k SNPs processed and plotted in ~100ms!
+
+*477k SNPs processed and plotted in ~100ms!*
 
 
 ## Eye-catching
