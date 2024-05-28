@@ -46,6 +46,8 @@ export const selectedScaffolds = writable([]);
 
 export const scaffoldGap = writable(50000000);
 
+export const drawGridlines = writable(true);
+export const gridlineOpacity = writable(0.1);
 export const drawIdeograms = writable(false);
 export const pointRadius = writable(3);
 

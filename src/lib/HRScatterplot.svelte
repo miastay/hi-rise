@@ -1,6 +1,6 @@
 <script>
     import * as d3 from 'd3';
-    import { assoc_data, plotWidth, plotHeight, colors, optimizationStats, optimizationChunkSize, doOptimization, sigColumn, posColumn, rsColumn, chrColumn, live_data, selectedScaffolds, scaffoldGap, optimizationChunkFactor, showCanvas, drawIdeograms, pointRadius } from '../store';
+    import { assoc_data, plotWidth, plotHeight, colors, optimizationStats, optimizationChunkSize, doOptimization, sigColumn, posColumn, rsColumn, chrColumn, live_data, selectedScaffolds, scaffoldGap, optimizationChunkFactor, showCanvas, drawIdeograms, pointRadius, drawGridlines, gridlineOpacity } from '../store';
     import { WidgetPlaceholder, Spinner, Button } from 'flowbite-svelte';
     import { onMount } from 'svelte';
     import { RefreshOutline } from 'flowbite-svelte-icons';
@@ -230,9 +230,10 @@
                 .text("-log(p-value)"));
 
         // Create the grid.
-        svg.append("g")
+        if($drawGridlines) {
+            svg.append("g")
             .attr("stroke", "currentColor")
-            .attr("stroke-opacity", 0.1)
+            .attr("stroke-opacity", $gridlineOpacity ?? 0.1)
             .call(g => g.append("g")
             .selectAll("line")
             .data(x.ticks())
@@ -249,7 +250,7 @@
                 .attr("y2", d => 0.5 + y(d))
                 .attr("x1", marginLeft)
                 .attr("x2", width - marginRight));
-
+        }
 
         // plot significance line
         console.log(ySignificance)

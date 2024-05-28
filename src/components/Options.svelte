@@ -1,10 +1,11 @@
 <script>
     import HrCard from '../lib/HRCard.svelte';
     import { Tabs, TabItem, NumberInput, Label, Select, Toggle, Radio, Card, Badge, Checkbox, Button, Range } from 'flowbite-svelte';
-    import { plotWidth, plotHeight, colors, doOptimization, optimizationChunkSize, optimizationType, optimizationStats, inputColumns, posColumn, sigColumn, chrColumn, rsColumn, scaffolds, selectedScaffolds, scaffoldGap, optimizationChunkFactor, drawIdeograms } from '../store';
+    import { plotWidth, plotHeight, colors, doOptimization, optimizationChunkSize, optimizationType, optimizationStats, inputColumns, posColumn, sigColumn, chrColumn, rsColumn, scaffolds, selectedScaffolds, scaffoldGap, optimizationChunkFactor, drawIdeograms, drawGridlines, gridlineOpacity } from '../store';
     import ColorPicker from './ColorPicker.svelte';
     import HrQuestion from '../lib/HRQuestion.svelte';
     import { Canvg } from 'canvg';
+    import HrChip from '../lib/HRChip.svelte';
 
     const palettes = {
         "hi-rise": {
@@ -206,7 +207,18 @@
                         <ColorPicker name="Significant Points" bind:color={$colors.significant}/> <span>x</span>
                     </div>
                     <ColorPicker name="Significance Line" bind:color={$colors.significanceLine}/>
-                    <Toggle bind:checked={$drawIdeograms}>Draw ideograms <HrQuestion><span>Reduce the number of points plotted below a perceptible significance level.</span></HrQuestion></Toggle>
+                    <Toggle bind:checked={$drawIdeograms}>Draw ideograms <HrQuestion><span>Plot SVG images of human chromosome ideograms along the x-axis.</span></HrQuestion></Toggle>
+                </div>
+                <div class="col">
+                    <div class="col">
+                        <HrChip title="Grid">
+                            <Toggle bind:checked={$drawGridlines}>Draw gridlines</Toggle>
+                            <Label class="space-y-2">
+                                <span class="text-md">Grid opacity</span>
+                                <NumberInput min="0" max="1" step="0.1" disabled={!$drawGridlines} class={!$drawGridlines ? 'opacity-50' : ''} bind:value={$gridlineOpacity} />
+                            </Label>
+                        </HrChip>
+                    </div>
                 </div>
             </div>
         </TabItem>
@@ -237,9 +249,11 @@
                 </div>
                 <div class="col">
                     {#if $optimizationStats.originalTotal !== 0}
-                        <span>Objects plotted: {$optimizationStats.numReduced}/{$optimizationStats.originalTotal} <Badge color="green">-{100 - (Math.round($optimizationStats.numReduced * 10000 / ($optimizationStats.originalTotal * 1.0)) / 100.0)}%</Badge></span>
-                        <span>Processing time: <Badge color={$optimizationStats.originalTotal / $optimizationStats.processTime > 1000 ? "yellow" : "green"}>{$optimizationStats.processTime}ms</Badge></span>
-                        <span>Rendering time: <Badge color={$optimizationStats.numReduced / 400 < $optimizationStats.renderTime ? "yellow" : "green"}>{$optimizationStats.renderTime}ms</Badge></span>
+                        <HrChip title="Stats">
+                            <span>Objects plotted: {$optimizationStats.numReduced}/{$optimizationStats.originalTotal} <Badge color="green">-{100 - (Math.round($optimizationStats.numReduced * 10000 / ($optimizationStats.originalTotal * 1.0)) / 100.0)}%</Badge></span>
+                            <span>Processing time: <Badge color={$optimizationStats.originalTotal / $optimizationStats.processTime > 1000 ? "yellow" : "green"}>{$optimizationStats.processTime}ms</Badge></span>
+                            <span>Rendering time: <Badge color={$optimizationStats.numReduced / 400 < $optimizationStats.renderTime ? "yellow" : "green"}>{$optimizationStats.renderTime}ms</Badge></span>
+                        </HrChip>
                     {/if}
                 </div>
             </div>
@@ -247,8 +261,8 @@
         <TabItem title="Significance">
             <div class="col">
                 <ColorPicker name="All Points" bind:color={$colors.points}/>
-                <ColorPicker name="Significant Points" bind:color={$colors.significant}/>
-                <ColorPicker name="Significance Line" bind:color={$colors.significanceLine}/>
+                <ColorPicker name="Significant Points" colors={$colors} bind:color={$colors.significant}/>
+                <ColorPicker name="Significance Line" colors={$colors} bind:color={$colors.significanceLine}/>
             </div>
         </TabItem>
     </Tabs>
@@ -280,7 +294,9 @@
         flex-direction: row;
         gap: 1rem;
         align-items: center;
+        white-space: nowrap;
     }
+    
     .wrap {
         display: flex;
         flex-direction: column;
@@ -303,6 +319,11 @@
 
     :global(#blankcanvas) {
         display: none;
+    }
+
+    :global(button.active[role="tab"]) {
+        @apply dark:text-primary-300;
+        @apply dark:border-primary-300;
     }
 
 </style>

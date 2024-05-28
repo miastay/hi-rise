@@ -1,8 +1,9 @@
 <script>
     import { Button, Modal } from 'flowbite-svelte';
+    import { colors } from '../store';
 
     export let color = "#ffeedd";
-    export let name = "Color"
+    export let name = "Color";
 
     let modalOpen = false;
 
@@ -13,7 +14,16 @@
     <span>{name}</span>
 </div>
 <Modal title={`Pick color for ${name}`} bind:open={modalOpen}>
-    <input type="text" placeholder="hex value" bind:value={color} on:blur={() => modalOpen = false}/>
+    <div class="row">
+        <input type="color" bind:value={color} />
+        <input type="text" placeholder="hex value" bind:value={color} on:blur={() => modalOpen = false}/>
+        <div class="row">
+            {#each Object.values($colors) as c, i}
+                <!-- {JSON.stringify(c)} -->
+                <div class="color" style={`background: ${c}`} on:click={() => color = c}/>
+            {/each}
+        </div>
+    </div>
     <svelte:fragment slot="footer">
     <Button on:click={() => modalOpen = false}>Set color</Button>
     </svelte:fragment>
@@ -37,10 +47,23 @@
         span {
             margin-bottom: 3px;
         }
-        .color {
+    }
+    .color {
         width: 25px;
         height: 25px;
         border-radius: 15px;
+    }
+    .row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 1rem;
+        > input {
+            &[type="color"] {
+                outline: solid 1px black;
+                outline-offset: 4px;
+                border: none !important;
+            }
         }
     }
 </style>
